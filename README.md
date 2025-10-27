@@ -197,7 +197,7 @@ flutter run
 - ✅ Indicateurs visuels
 - ✅ Gestion intelligente des mois
 - ✅ Interface responsive
-- ⏳ Persistance des données (à venir)
+- ✅ Persistance des données
 - ⏳ Catégories de dépenses (à venir)
 - ⏳ Graphiques statistiques (à venir)
 - ⏳ Export des données (à venir)
