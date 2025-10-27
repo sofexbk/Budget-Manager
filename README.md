@@ -245,6 +245,6 @@ Développé avec ❤️ en Flutter
 
 Pour toute question ou problème :
 - Ouvrir une issue sur GitHub
-- Contacter via email (à définir)
+- Contacter via email (soufianbouktaib1@gmail.com)
 
 **Bonne gestion de votre budget ! 💪💰**
