@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../models/expense.dart';
+import '../database/db_helper.dart';
 
 class BudgetHomePage extends StatefulWidget {
   @override
@@ -15,31 +17,70 @@ class _BudgetHomePageState extends State<BudgetHomePage> {
   final Map<String, List<Expense>> monthlyHistory = {};
   int _selectedIndex = 0;
 
+  @override
+  void initState() {
+    super.initState();
+    _initializeApp();
+  }
+
+  Future<void> _initializeApp() async {
+    final savedSalary = await loadSalary();
+    final expenses = await DBHelper.getAllExpenses();
+
+    setState(() {
+      monthlySalary = savedSalary;
+      monthlyHistory[currentMonth] = expenses;
+    });
+  }
+
   String get currentMonth =>
       "${DateTime.now().month.toString().padLeft(2, '0')}/${DateTime.now().year}";
 
   void _setSalary() {
     if (_salaryController.text.isEmpty) return;
+    final salary = double.tryParse(_salaryController.text);
+    if (salary == null) return;
+
     setState(() {
-      monthlySalary = double.tryParse(_salaryController.text);
+      monthlySalary = salary;
       monthlyHistory.putIfAbsent(currentMonth, () => []);
+    });
+
+    saveSalary(salary);
+  }
+
+
+  Future<void> _loadExpenses() async {
+    final expenses = await DBHelper.getAllExpenses();
+    setState(() {
+      monthlyHistory[currentMonth] = expenses;
     });
   }
 
-  void _addExpense() {
+  Future<void> _addExpense() async {
     if (_expenseTitleController.text.isEmpty || _expenseAmountController.text.isEmpty) return;
+
     final expense = Expense(
       title: _expenseTitleController.text,
       amount: double.tryParse(_expenseAmountController.text) ?? 0,
       date: DateTime.now(),
     );
+
+    // 1️⃣ Ajouter dans SQLite
+    await DBHelper.insertExpense(expense);
+
+    // 2️⃣ Recharger les dépenses
+    final expenses = await DBHelper.getAllExpenses();
     setState(() {
-      monthlyHistory[currentMonth]!.add(expense);
+      monthlyHistory[currentMonth] = expenses;
     });
+
+    // 3️⃣ Nettoyer les champs
     _expenseTitleController.clear();
     _expenseAmountController.clear();
     Navigator.pop(context);
   }
+
 
   double _totalExpenses(String month) {
     final expenses = monthlyHistory[month] ?? [];
@@ -140,64 +181,80 @@ class _BudgetHomePageState extends State<BudgetHomePage> {
     );
   }
 
+  Future<void> saveSalary(double value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setDouble('monthlySalary', value);
+  }
+
+  Future<double?> loadSalary() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getDouble('monthlySalary');
+  }
+
+
   Widget _buildDashboard() {
     if (monthlySalary == null) {
       return Center(
-        child: Container(
-          margin: EdgeInsets.all(24),
-          padding: EdgeInsets.all(32),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(20),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.05),
-                blurRadius: 10,
-                offset: Offset(0, 4),
-              ),
-            ],
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.account_balance_wallet, size: 64, color: Colors.indigo),
-              SizedBox(height: 20),
-              Text(
-                "Bienvenue !",
-                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-              ),
-              SizedBox(height: 10),
-              Text(
-                "Entrez votre salaire mensuel pour commencer",
-                style: TextStyle(fontSize: 16, color: Colors.grey[600]),
-                textAlign: TextAlign.center,
-              ),
-              SizedBox(height: 30),
-              TextField(
-                controller: _salaryController,
-                keyboardType: TextInputType.number,
-                decoration: InputDecoration(
-                  labelText: "Salaire mensuel (DH)",
-                  prefixIcon: Icon(Icons.monetization_on),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(16),
+          child: Center(
+            child: Container(
+              margin: const EdgeInsets.all(24),
+              padding: const EdgeInsets.all(32),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.05),
+                    blurRadius: 10,
+                    offset: Offset(0, 4),
                   ),
-                ),
+                ],
               ),
-              SizedBox(height: 20),
-              ElevatedButton(
-                onPressed: _setSalary,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.indigo,
-                  foregroundColor: Colors.white,
-                  padding: EdgeInsets.symmetric(horizontal: 48, vertical: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.account_balance_wallet, size: 64, color: Colors.indigo),
+                  const SizedBox(height: 20),
+                  const Text(
+                    "Bienvenue !",
+                    style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
                   ),
-                ),
-                child: Text("Commencer", style: TextStyle(fontSize: 16)),
+                  const SizedBox(height: 10),
+                  const Text(
+                    "Entrez votre salaire mensuel pour commencer",
+                    style: TextStyle(fontSize: 16, color: Colors.grey),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 30),
+                  TextField(
+                    controller: _salaryController,
+                    keyboardType: TextInputType.number,
+                    decoration: InputDecoration(
+                      labelText: "Salaire mensuel (DH)",
+                      prefixIcon: const Icon(Icons.monetization_on),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  ElevatedButton(
+                    onPressed: _setSalary,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.indigo,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 48, vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: const Text("Commencer", style: TextStyle(fontSize: 16)),
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
         ),
       );
@@ -683,3 +740,4 @@ class _BudgetHomePageState extends State<BudgetHomePage> {
     );
   }
 }
+

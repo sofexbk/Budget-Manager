@@ -76,7 +76,11 @@ class HistoryPage extends StatelessWidget {
                                 fontWeight: FontWeight.bold,
                                 fontSize: 18,
                               ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              softWrap: false,
                             ),
+
                             const SizedBox(height: 4),
                             Text(
                               "${monthlyHistory[month]!.length} dépenses",
