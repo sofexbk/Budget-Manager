@@ -204,7 +204,6 @@ flutter run
 
 ## 📈 Améliorations Futures
 
-- [ ] **Persistance locale** : Sauvegarde avec SharedPreferences ou SQLite
 - [ ] **Catégories** : Organiser les dépenses par catégorie
 - [ ] **Graphiques** : Visualisation avec charts
 - [ ] **Export** : PDF ou Excel des rapports mensuels
